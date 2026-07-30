@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Old People social realtime event",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["type", "at"],
+      "properties": {
+        "type": { "enum": ["connected", "pong"] },
+        "at": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "required": ["type", "conversationId"],
+      "properties": {
+        "type": { "enum": ["greeting", "message", "conversation_accepted"] },
+        "conversationId": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+schema_version: 1
+id: chat-old-people
+feature: chat
+variant: old-people
+name: Old People Social Chat
+version: 0.1.0
+status: verified
+summary: Authenticated one-to-one WeChat Mini Program chat with greeting consent, mutual-follow authorization, text/voice/image messages, moderation, durable history, and realtime refresh.
+discovery:
+  tags: [chat, messaging, wechat-miniprogram, express, sqlite, websocket, moderation]
+  use_when:
+    - A product needs persistent one-to-one messaging that starts as a consent-based greeting request.
+    - A WeChat Mini Program needs text, push-to-talk voice, and single-image private messages.
+  not_for:
+    - Group chat, end-to-end encryption, or anonymous messaging.
+    - AI customer support conversations; the source project implements those under a separate support domain.
+source:
+  project: old_people
+  revision: 26b22a3ae356d9ffdc0124ad87ae72b2efa0b5cc
+  working_tree_dirty: true
+compatibility:
+  runtimes:
+    - node>=22.13
+    - wechat-miniprogram
+  frameworks:
+    - express>=5
+  databases:
+    - sqlite-with-foreign-keys-and-wal
+dependencies:
+  capabilities: []
+  packages:
+    - express@^5.1.0
+    - jsonwebtoken@^9.0.2
+    - multer@^2.0.2
+    - ws@^8.18.3
+    - zod@^4.0.5
+configuration:
+  required:
+    - DATABASE_PATH
+    - JWT_SECRET
+    - PUBLIC_BASE_URL
+    - STORAGE_DRIVER
+    - SOCIAL_MODE
+    - SOCIAL_ROLLOUT_PERCENT
+  optional:
+    - WX_APPID
+    - WX_SECRET
+    - COS_SECRET_ID
+    - COS_SECRET_KEY
+    - COS_BUCKET
+    - COS_REGION
+entrypoints:
+  implementation:
+    - implementation/chat-domain.js
+    - implementation/idempotency.js
+    - implementation/message-time.js
+  contracts:
+    - contracts/http-api.yaml
+    - contracts/data-model.sql
+    - contracts/realtime.schema.json
+    - contracts/client-state.md
+  adapters:
+    - adapters/express-node-sqlite/README.md
+    - adapters/wechat-miniprogram/README.md
+verification:
+  commands:
+    - node --test tests/*.test.js
+    - python3 /path/to/deposit-feature-capability/scripts/validate_capability.py .

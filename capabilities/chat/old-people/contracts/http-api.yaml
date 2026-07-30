@@ -1,0 +1,120 @@
+openapi: 3.1.0
+info:
+  title: Old People Social Chat API
+  version: 0.1.0
+servers:
+  - url: /api/v1/social
+security:
+  - bearerAuth: []
+paths:
+  /bootstrap:
+    get:
+      summary: Current public profile and unread counts
+      responses:
+        "200": { description: Bootstrap state }
+  /profiles/{profileId}/greeting:
+    post:
+      summary: Start or retry a consent-based greeting
+      parameters:
+        - { in: path, name: profileId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, clientRequestId]
+              properties:
+                content: { type: string, minLength: 1, maxLength: 80 }
+                clientRequestId: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        "201": { description: Greeting persisted or replayed }
+        "409": { description: Pending greeting or changed idempotent replay }
+        "422": { description: Moderation blocked }
+        "429": { description: Ignore cooldown active }
+  /messages/upload:
+    post:
+      summary: Sanitize, privately store, and moderate one image or voice file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201": { description: Reviewed media handle }
+        "413": { description: Over 12 MiB }
+        "415": { description: Unsupported media }
+        "422": { description: Unreadable or blocked media }
+  /conversations:
+    get:
+      summary: Newest-first conversation page
+      parameters:
+        - { in: query, name: cursor, schema: { type: string, maxLength: 300 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200": { description: Conversation page and next cursor }
+  /conversations/{conversationId}:
+    get:
+      summary: Conversation metadata and oldest-to-newest message page
+      parameters:
+        - { in: path, name: conversationId, required: true, schema: { type: string } }
+        - { in: query, name: cursor, schema: { type: string, maxLength: 300 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200": { description: Conversation, messages, and next cursor; marks read }
+        "403": { description: Blocked pair }
+        "404": { description: Not a visible member }
+  /conversations/{conversationId}/accept:
+    post:
+      summary: Recipient accepts and creates mutual follows
+      parameters:
+        - { in: path, name: conversationId, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Active conversation and mutual relationship }
+        "409": { description: Not a pending recipient action }
+  /conversations/{conversationId}/ignore:
+    post:
+      summary: Recipient ignores, reads, and hides request
+      parameters:
+        - { in: path, name: conversationId, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Ignored }
+        "409": { description: Not a pending recipient action }
+  /conversations/{conversationId}/messages:
+    post:
+      summary: Send or replay a message
+      parameters:
+        - { in: path, name: conversationId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messageKind, content, clientRequestId]
+              properties:
+                messageKind: { enum: [text, voice, image] }
+                content: { type: string, maxLength: 1000 }
+                mediaUrl: { type: string, format: uri }
+                mediaStorageKey: { type: string, maxLength: 500 }
+                clientRequestId: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        "201": { description: Message persisted or identical retry replayed }
+        "400": { description: Missing or unsafe media }
+        "403": { description: Blocked or mutual-follow requirement failed }
+        "409": { description: Request ID changed or media already used }
+        "422": { description: Content or media not reviewed/blocked }
+  /moderation/{eventId}/appeal:
+    post:
+      summary: Appeal an owned moderation event
+      parameters:
+        - { in: path, name: eventId, required: true, schema: { type: string } }
+      responses:
+        "201": { description: Appeal recorded }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
